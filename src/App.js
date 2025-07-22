@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle } from 'lucide-react';
+import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu } from 'lucide-react';
 
 // --- Particle Background Component ---
 const ParticleBackground = () => {
@@ -41,7 +41,7 @@ const ParticleBackground = () => {
 
         let animationFrameId;
         const initParticles = () => {
-            const particleCount = Math.floor((canvas.width * canvas.height) / 10000);
+            const particleCount = Math.floor((canvas.width * canvas.height) / 15000); // Reduced density for performance
             particles = [];
             for (let i = 0; i < particleCount; i++) {
                 particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
@@ -76,16 +76,13 @@ const ParticleBackground = () => {
 
 
 // --- Static Data ---
-// --- Static Data ---
 const resourcesData = {
     "Core AI & Machine Learning": [
         { id: 1, title: "Machine Learning by Andrew Ng", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/learn/machine-learning" },
         { id: 2, title: "Deep Learning Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/deep-learning" },
-        // FIXED LINK BELOW
         { id: 3, title: "Pattern Recognition and Machine Learning", type: "Book", author: "C. Bishop", url: "https://www.google.com/search?q=Pattern+Recognition+and+Machine+Learning+by+Christopher+Bishop" },
     ],
     "Robotics": [
-         // FIXED LINK BELOW
         { id: 6, title: "Robotics: Modelling, Planning and Control", type: "Book", author: "B. Siciliano", url: "https://www.google.com/search?q=Robotics+Modelling+Planning+and+Control+by+Bruno+Siciliano" },
         { id: 7, title: "ROS (Robot Operating System) Tutorials", type: "Documentation", platform: "ROS.org", url: "http://wiki.ros.org/ROS/Tutorials" },
         { id: 8, title: "Modern Robotics Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/modernrobotics" },
@@ -93,7 +90,6 @@ const resourcesData = {
     "Advanced Topics": [
         { id: 10, title: "Reinforcement Learning: An Introduction", type: "Book", author: "Sutton & Barto", url: "http://incompleteideas.net/book/the-book-2nd.html" },
         { id: 11, title: "Computer Vision: Algorithms and Applications", type: "Book", author: "R. Szeliski", url: "http://szeliski.org/Book/" },
-         // FIXED LINK BELOW
         { id: 12, "title": "Natural Language Processing with Transformers", "type": "Book", "author": "L. Tunstall", "url": "https://www.google.com/search?q=Natural+Language+Processing+with+Transformers+by+Lewis+Tunstall" },
     ]
 };
@@ -101,10 +97,7 @@ const resourcesData = {
 // --- Gemini API Helper ---
 const callGeminiAPI = async (prompt, isJson = false) => {
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-    
-    if (!apiKey) {
-        throw new Error("Gemini API key is not configured in Vercel Environment Variables.");
-    }
+    if (!apiKey) throw new Error("Gemini API key is not configured.");
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     
@@ -154,26 +147,39 @@ const NavItem = ({ icon: Icon, label, onClick, isActive }) => (
     </button>
 );
 
-const Sidebar = ({ currentPage, setCurrentPage }) => (
-    <aside className="w-64 bg-slate-900/70 backdrop-blur-lg border-r border-slate-700/50 flex flex-col fixed h-full z-20">
-        <div className="flex items-center justify-center h-20 border-b border-slate-700/50"><Cpu className="w-8 h-8 text-cyan-400 animate-pulse" /><h1 className="ml-3 text-xl font-bold text-white tracking-wider">AI & Robotics Hub</h1></div>
-        <nav className="flex-grow mt-6 space-y-2">
-            <NavItem icon={Home} label="Dashboard" onClick={() => setCurrentPage('dashboard')} isActive={currentPage === 'dashboard'} />
-            <NavItem icon={Newspaper} label="Latest News" onClick={() => setCurrentPage('news')} isActive={currentPage === 'news'} />
-            <NavItem icon={BookOpen} label="Learning Resources" onClick={() => setCurrentPage('resources')} isActive={currentPage === 'resources'} />
-        </nav>
-        <div className="p-4 border-t border-slate-700/50 text-slate-500 text-xs">
-            <p>&copy; 2025 AI & Robotics Hub. All rights reserved.</p>
-        </div>
-    </aside>
+const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => (
+    <>
+        {/* Overlay for mobile */}
+        <div className={`fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsOpen(false)}></div>
+        
+        <aside className={`w-64 bg-slate-900/80 backdrop-blur-lg border-r border-slate-700/50 flex-col fixed h-full z-30 transition-transform duration-300 ease-in-out md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className="flex items-center justify-between h-20 border-b border-slate-700/50 px-4">
+                <div className="flex items-center">
+                    <Cpu className="w-8 h-8 text-cyan-400 animate-pulse" />
+                    <h1 className="ml-3 text-xl font-bold text-white tracking-wider">AI Hub</h1>
+                </div>
+                <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsOpen(false)}>
+                    <X size={24} />
+                </button>
+            </div>
+            <nav className="flex-grow mt-6 space-y-2">
+                <NavItem icon={Home} label="Dashboard" onClick={() => { setCurrentPage('dashboard'); setIsOpen(false); }} isActive={currentPage === 'dashboard'} />
+                <NavItem icon={Newspaper} label="Latest News" onClick={() => { setCurrentPage('news'); setIsOpen(false); }} isActive={currentPage === 'news'} />
+                <NavItem icon={BookOpen} label="Learning Resources" onClick={() => { setCurrentPage('resources'); setIsOpen(false); }} isActive={currentPage === 'resources'} />
+            </nav>
+            <div className="p-4 border-t border-slate-700/50 text-slate-500 text-xs">
+                <p>&copy; 2025 AI & Robotics Hub. All rights reserved.</p>
+            </div>
+        </aside>
+    </>
 );
 
 const Dashboard = ({ setCurrentPage, trendingTopics, articles, isNewsLoading, newsError }) => (
-    <div className="p-8 md:p-12 animate-fadeIn">
-        <div className="relative overflow-hidden rounded-2xl bg-slate-800/50 p-10 border border-slate-700/50 shadow-2xl shadow-cyan-500/10">
+    <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
+        <div className="relative overflow-hidden rounded-2xl bg-slate-800/50 p-6 md:p-10 border border-slate-700/50 shadow-2xl shadow-cyan-500/10">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_rgba(0,255,255,0.15)_0%,_transparent_60%)] animate-pulse-slow"></div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 relative">The Future is <span className="text-cyan-400">Now</span>.</h1>
-            <p className="text-lg md:text-xl text-slate-300 max-w-3xl mb-8 relative">Welcome to your central hub for breakthroughs in AI and Robotics. Explore real-time news and access AI-powered learning paths.</p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 relative">The Future is <span className="text-cyan-400">Now</span>.</h1>
+            <p className="text-base md:text-lg lg:text-xl text-slate-300 max-w-3xl mb-8 relative">Welcome to your central hub for breakthroughs in AI and Robotics. Explore real-time news and access AI-powered learning paths.</p>
             <div className="flex flex-col sm:flex-row gap-4">
                 <button onClick={() => setCurrentPage('news')} className="flex items-center justify-center px-6 py-3 font-semibold text-white bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all duration-300 transform hover:scale-105">Explore News <Newspaper className="w-5 h-5 ml-2" /></button>
                 <button onClick={() => setCurrentPage('resources')} className="flex items-center justify-center px-6 py-3 font-semibold text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-all duration-300 transform hover:scale-105">Start Learning <ArrowRight className="w-5 h-5 ml-2" /></button>
@@ -230,12 +236,12 @@ const NewsPage = ({ articles, isNewsLoading, newsError }) => {
     return (
         <>
             {modalContent && <Modal title={modalContent.title} content={modalContent.content} onClose={() => setModalContent(null)} />}
-            <div className="p-8 md:p-12 animate-fadeIn">
-                <div className="flex flex-col md:flex-row justify-between md:items-center mb-8">
-                    <div className="flex items-center mb-4 md:mb-0"><Newspaper className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-4xl font-bold text-white">Latest News</h1></div>
-                    <div className="flex items-center gap-2 p-1 bg-slate-800/60 border border-slate-700 rounded-lg">
+            <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
+                <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4">
+                    <div className="flex items-center"><Newspaper className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-3xl md:text-4xl font-bold text-white">Latest News</h1></div>
+                    <div className="flex items-center gap-2 p-1 bg-slate-800/60 border border-slate-700 rounded-lg self-start md:self-center overflow-x-auto">
                         {filters.map(filter => (
-                            <button key={filter} onClick={() => setActiveFilter(filter)} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeFilter === filter ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700/50'}`}>{filter}</button>
+                            <button key={filter} onClick={() => setActiveFilter(filter)} className={`flex-shrink-0 px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeFilter === filter ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:bg-slate-700/50'}`}>{filter}</button>
                         ))}
                     </div>
                 </div>
@@ -314,11 +320,11 @@ const ResourcesPage = () => {
     return (
         <>
             {modalContent && <Modal title={modalContent.title} content={modalContent.content} onClose={() => setModalContent(null)} />}
-            <div className="p-8 md:p-12 animate-fadeIn">
-                <div className="flex items-center mb-8"><BookOpen className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-4xl font-bold text-white">Learning Resources</h1></div>
+            <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
+                <div className="flex items-center mb-8"><BookOpen className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-3xl md:text-4xl font-bold text-white">Learning Resources</h1></div>
                 
                 <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 mb-12">
-                    <h2 className="text-2xl font-bold text-white mb-3 flex items-center"><Sparkles size={20} className="text-cyan-400 mr-3" /> ✨ AI Learning Path Generator</h2>
+                    <h2 className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center"><Sparkles size={20} className="text-cyan-400 mr-3" /> ✨ AI Learning Path Generator</h2>
                     <p className="text-slate-400 mb-4">Describe your learning goal, and our AI will create a personalized study plan for you.</p>
                     <div className="flex flex-col sm:flex-row gap-4">
                         <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., 'Get started with computer vision'" className="flex-grow bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"/>
@@ -359,6 +365,7 @@ export default function App() {
     const [articles, setArticles] = useState([]);
     const [isNewsLoading, setIsNewsLoading] = useState(true);
     const [newsError, setNewsError] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const fetchNews = useCallback(async () => {
         setIsNewsLoading(true);
@@ -458,8 +465,12 @@ export default function App() {
         <div className="bg-slate-900 min-h-screen text-slate-200 font-sans">
             <ParticleBackground />
             <div className="relative z-10 flex">
-                <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                <main className="flex-1 ml-64">
+                <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+                <main className="flex-1 md:ml-64">
+                    {/* Hamburger Menu Button */}
+                    <button className="md:hidden fixed top-4 left-4 z-40 text-white bg-slate-800/50 p-2 rounded-md" onClick={() => setIsSidebarOpen(true)}>
+                        <Menu size={24} />
+                    </button>
                     {renderPage()}
                 </main>
             </div>
