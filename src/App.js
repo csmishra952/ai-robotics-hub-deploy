@@ -76,21 +76,25 @@ const ParticleBackground = () => {
 
 
 // --- Static Data ---
+// --- Static Data ---
 const resourcesData = {
     "Core AI & Machine Learning": [
         { id: 1, title: "Machine Learning by Andrew Ng", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/learn/machine-learning" },
         { id: 2, title: "Deep Learning Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/deep-learning" },
-        { id: 3, title: "Pattern Recognition and Machine Learning", type: "Book", author: "C. Bishop", url: "#" },
+        // FIXED LINK BELOW
+        { id: 3, title: "Pattern Recognition and Machine Learning", type: "Book", author: "C. Bishop", url: "https://www.google.com/search?q=Pattern+Recognition+and+Machine+Learning+by+Christopher+Bishop" },
     ],
     "Robotics": [
-        { id: 6, title: "Robotics: Modelling, Planning and Control", type: "Book", author: "B. Siciliano", url: "#" },
+         // FIXED LINK BELOW
+        { id: 6, title: "Robotics: Modelling, Planning and Control", type: "Book", author: "B. Siciliano", url: "https://www.google.com/search?q=Robotics+Modelling+Planning+and+Control+by+Bruno+Siciliano" },
         { id: 7, title: "ROS (Robot Operating System) Tutorials", type: "Documentation", platform: "ROS.org", url: "http://wiki.ros.org/ROS/Tutorials" },
         { id: 8, title: "Modern Robotics Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/modernrobotics" },
     ],
     "Advanced Topics": [
         { id: 10, title: "Reinforcement Learning: An Introduction", type: "Book", author: "Sutton & Barto", url: "http://incompleteideas.net/book/the-book-2nd.html" },
         { id: 11, title: "Computer Vision: Algorithms and Applications", type: "Book", author: "R. Szeliski", url: "http://szeliski.org/Book/" },
-        { id: 12, "title": "Natural Language Processing with Transformers", "type": "Book", "author": "L. Tunstall", "url": "#" },
+         // FIXED LINK BELOW
+        { id: 12, "title": "Natural Language Processing with Transformers", "type": "Book", "author": "L. Tunstall", "url": "https://www.google.com/search?q=Natural+Language+Processing+with+Transformers+by+Lewis+Tunstall" },
     ]
 };
 
