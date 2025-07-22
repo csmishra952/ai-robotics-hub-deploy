@@ -96,7 +96,6 @@ const resourcesData = {
 
 // --- Gemini API Helper ---
 const callGeminiAPI = async (prompt, isJson = false) => {
-    // This securely reads the API key from the Vercel environment variables
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
     
     if (!apiKey) {
@@ -361,45 +360,48 @@ export default function App() {
         setIsNewsLoading(true);
         setNewsError(null);
         
-        // This securely reads the API key from the Vercel environment variables
-        const gnewsApiKey = process.env.REACT_APP_GNEWS_API_KEY;
+        const newsdataApiKey = process.env.REACT_APP_NEWSDATA_API_KEY;
 
-        if (!gnewsApiKey) {
-            setNewsError("News API key is not configured in Vercel Environment Variables.");
+        if (!newsdataApiKey) {
+            setNewsError("NewsData.io API key is not configured in Vercel Environment Variables.");
             setIsNewsLoading(false);
             return;
         }
 
         const query = '"artificial intelligence" OR "robotics"';
-        const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=12&token=${gnewsApiKey}`;
+        const url = `https://newsdata.io/api/1/news?apikey=${newsdataApiKey}&q=${encodeURIComponent(query)}&language=en`;
 
         try {
             const response = await fetch(url);
             if (!response.ok) {
-                throw new Error(`News API request failed with status ${response.status}`);
+                throw new Error(`NewsData.io API request failed with status ${response.status}`);
             }
             const data = await response.json();
             
-            const formattedArticles = data.articles.map((article, index) => {
-                let tags = [];
-                const content = `${article.title} ${article.description}`.toLowerCase();
-                if (content.includes('robot') || content.includes('robotics')) tags.push('Robotics');
-                if (content.includes('ai') || content.includes('artificial intelligence') || content.includes('llm')) tags.push('AI');
-                if (content.includes('hardware') || content.includes('chip') || content.includes('sensor')) tags.push('Hardware');
-                if (content.includes('ethic') || content.includes('bias') || content.includes('fairness')) tags.push('Ethics');
-                if(tags.length === 0) tags.push('General');
+            if (data.status === 'success' && data.results) {
+                const formattedArticles = data.results.map(article => {
+                    let tags = [];
+                    const content = `${article.title} ${article.description || ''}`.toLowerCase();
+                    if (content.includes('robot') || content.includes('robotics')) tags.push('Robotics');
+                    if (content.includes('ai') || content.includes('artificial intelligence') || content.includes('llm')) tags.push('AI');
+                    if (content.includes('hardware') || content.includes('chip') || content.includes('sensor')) tags.push('Hardware');
+                    if (content.includes('ethic') || content.includes('bias') || content.includes('fairness')) tags.push('Ethics');
+                    if(tags.length === 0) tags.push('General');
 
-                return {
-                    id: article.url,
-                    title: article.title,
-                    snippet: article.description,
-                    source: article.source.name,
-                    date: new Date(article.publishedAt).toLocaleDateString(),
-                    url: article.url,
-                    tags: tags
-                }
-            });
-            setArticles(formattedArticles);
+                    return {
+                        id: article.article_id || article.link,
+                        title: article.title,
+                        snippet: article.description || "No description available.",
+                        source: article.source_id || "Unknown Source",
+                        date: new Date(article.pubDate).toLocaleDateString(),
+                        url: article.link,
+                        tags: tags
+                    }
+                });
+                setArticles(formattedArticles);
+            } else {
+                 throw new Error(data.results?.message || "Failed to fetch news from NewsData.io");
+            }
         } catch (error) {
             console.error("Failed to fetch news:", error);
             setNewsError("Could not load news feed.");
