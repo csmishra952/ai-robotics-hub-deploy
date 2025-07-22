@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle } from 'lucide-react';
+import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle } from 'lucide-react';
 
 // --- Particle Background Component ---
 const ParticleBackground = () => {
@@ -75,16 +75,7 @@ const ParticleBackground = () => {
 };
 
 
-// --- Mock Data ---
-const newsData = [
-    { id: 1, title: "DeepMind's New Model Achieves Unprecedented Protein Folding Accuracy", source: "Nature", date: "2025-07-16", url: "https://www.nature.com/", snippet: "The latest iteration of AlphaFold demonstrates a significant leap in predicting complex protein structures, paving the way for new drug discoveries.", tags: ['AI', 'Biotech'] },
-    { id: 2, title: "Boston Dynamics Unveils 'Guardian', a Robotic Dog for Industrial Inspection", source: "Boston Dynamics", date: "2025-07-15", url: "https://bostondynamics.com/", snippet: "The Guardian model is equipped with advanced thermal and acoustic sensors for autonomous monitoring of hazardous industrial environments.", tags: ['Robotics', 'Hardware'] },
-    { id: 3, title: "OpenAI Announces GPT-5 with Advanced Multimodal Reasoning", source: "OpenAI Blog", date: "2025-07-14", url: "https://openai.com/blog/", snippet: "The next-gen language model can interpret and reason about video, audio, and complex diagrams simultaneously.", tags: ['AI', 'LLM'] },
-    { id: 4, title: "The Rise of Swarm Robotics in Precision Agriculture", source: "IEEE Spectrum", date: "2025-07-13", url: "https://spectrum.ieee.org/", snippet: "Small, autonomous drones are now working in coordinated swarms to monitor crop health and optimize resource usage with remarkable efficiency.", tags: ['Robotics', 'Agriculture'] },
-    { id: 5, title: "Tesla's Optimus Gen 2 Shows Off New Dexterous Hand Movements", source: "Tesla AI Day", date: "2025-07-11", url: "https://www.tesla.com/ai", snippet: "A new video demonstrates the humanoid robot delicately handling fragile objects, a major milestone for general-purpose robotics.", tags: ['Robotics', 'Hardware', 'Humanoid'] },
-    { id: 6, title: "Ethical AI: New Framework Proposed for Auditing Autonomous Systems", source: "MIT Technology Review", date: "2025-07-10", url: "https://www.technologyreview.com/", snippet: "Researchers propose a standardized framework to ensure AI systems in critical sectors like healthcare and finance are fair, transparent, and accountable.", tags: ['AI', 'Ethics'] }
-];
-
+// --- Static Data ---
 const resourcesData = {
     "Core AI & Machine Learning": [
         { id: 1, title: "Machine Learning by Andrew Ng", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/learn/machine-learning" },
@@ -105,12 +96,11 @@ const resourcesData = {
 
 // --- Gemini API Helper ---
 const callGeminiAPI = async (prompt, isJson = false) => {
-    // This securely uses the API key you will set up in Vercel
+    // This securely reads the API key from the Vercel environment variables
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
     
     if (!apiKey) {
-        console.error("Gemini API key not found. Make sure you have set it in your environment variables.");
-        throw new Error("API key is missing.");
+        throw new Error("Gemini API key is not configured in Vercel Environment Variables.");
     }
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -120,34 +110,22 @@ const callGeminiAPI = async (prompt, isJson = false) => {
         ...(isJson && {
             generationConfig: {
                 responseMimeType: "application/json",
-                responseSchema: {
-                    type: "ARRAY",
-                    items: { type: "STRING" }
-                }
+                responseSchema: { type: "ARRAY", items: { type: "STRING" } }
             }
         })
     };
 
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            throw new Error(`API call failed with status: ${response.status}`);
-        }
-        const result = await response.json();
-        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-            return result.candidates[0].content.parts[0].text;
-        } else {
-            console.error("Unexpected API response structure:", result);
-            throw new Error("Invalid response structure from Gemini API.");
-        }
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        throw error;
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+    const result = await response.json();
+    if (result.candidates?.[0]?.content?.parts?.[0]) {
+        return result.candidates[0].content.parts[0].text;
     }
+    throw new Error("Invalid response structure from Gemini API.");
 };
 
 
@@ -187,7 +165,7 @@ const Sidebar = ({ currentPage, setCurrentPage }) => (
     </aside>
 );
 
-const Dashboard = ({ setCurrentPage, trendingTopics }) => (
+const Dashboard = ({ setCurrentPage, trendingTopics, articles, isNewsLoading, newsError }) => (
     <div className="p-8 md:p-12 animate-fadeIn">
         <div className="relative overflow-hidden rounded-2xl bg-slate-800/50 p-10 border border-slate-700/50 shadow-2xl shadow-cyan-500/10">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_rgba(0,255,255,0.15)_0%,_transparent_60%)] animate-pulse-slow"></div>
@@ -202,11 +180,13 @@ const Dashboard = ({ setCurrentPage, trendingTopics }) => (
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
                 <div className="flex items-center mb-4"><Rss className="w-6 h-6 text-cyan-400" /><h2 className="ml-3 text-2xl font-bold text-white">Live News Feed</h2></div>
-                <ul className="space-y-3">
-                    {newsData.slice(0, 4).map(item => (
+                {isNewsLoading ? <div className="text-slate-400">Loading latest news...</div> :
+                 newsError ? <div className="text-red-400 flex items-center"><AlertTriangle className="mr-2"/>{newsError}</div> :
+                 <ul className="space-y-3">
+                    {articles.slice(0, 4).map(item => (
                         <li key={item.id} className="text-slate-300 hover:text-cyan-400 transition-colors duration-200"><a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-start"><ArrowRight className="w-4 h-4 mr-2 mt-1.5 flex-shrink-0" /><span>{item.title}</span></a></li>
                     ))}
-                </ul>
+                </ul>}
             </div>
             <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
                 <div className="flex items-center mb-4"><Zap className="w-6 h-6 text-cyan-400" /><h2 className="ml-3 text-2xl font-bold text-white">Trending Topics</h2></div>
@@ -220,13 +200,16 @@ const Dashboard = ({ setCurrentPage, trendingTopics }) => (
     </div>
 );
 
-const NewsPage = () => {
+const NewsPage = ({ articles, isNewsLoading, newsError }) => {
     const [activeFilter, setActiveFilter] = useState('All');
     const [modalContent, setModalContent] = useState(null);
     const [isSummarizing, setIsSummarizing] = useState(null);
 
     const filters = ['All', 'AI', 'Robotics', 'Hardware', 'Ethics'];
-    const filteredNews = activeFilter === 'All' ? newsData : newsData.filter(item => item.tags.includes(activeFilter));
+    
+    const filteredNews = activeFilter === 'All' ? articles : articles.filter(item => 
+        item.tags.some(tag => tag.toLowerCase().includes(activeFilter.toLowerCase()))
+    );
 
     const handleSummarize = async (article) => {
         setIsSummarizing(article.id);
@@ -235,7 +218,7 @@ const NewsPage = () => {
             const summary = await callGeminiAPI(prompt);
             setModalContent({ title: "✨ AI Summary", content: <p>{summary}</p> });
         } catch (error) {
-            setModalContent({ title: "Error", content: <p>Could not generate summary. Please try again later.</p> });
+            setModalContent({ title: "Error", content: <p>{error.message}</p> });
         } finally {
             setIsSummarizing(null);
         }
@@ -253,13 +236,15 @@ const NewsPage = () => {
                         ))}
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {isNewsLoading ? <div className="text-slate-300 text-center py-10">Loading latest news...</div> :
+                 newsError ? <div className="text-red-400 text-center py-10 flex items-center justify-center"><AlertTriangle className="mr-2"/>{newsError}</div> :
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredNews.map((item, index) => (
                         <div key={item.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fadeInUp">
                             <NewsCard article={item} onSummarize={handleSummarize} isSummarizing={isSummarizing === item.id} />
                         </div>
                     ))}
-                </div>
+                </div>}
             </div>
         </>
     );
@@ -268,13 +253,13 @@ const NewsPage = () => {
 const NewsCard = ({ article, onSummarize, isSummarizing }) => (
     <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 transition-all duration-300 hover:border-cyan-400/50 hover:scale-[1.02] hover:bg-slate-800/80 group h-full flex flex-col">
         <a href={article.url} target="_blank" rel="noopener noreferrer" className="p-6 flex-grow">
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 flex-wrap">
                 {article.tags.map(tag => <span key={tag} className="text-xs font-semibold text-cyan-300 bg-cyan-900/50 px-2 py-0.5 rounded-full">{tag}</span>)}
             </div>
             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors duration-300">{article.title}</h3>
             <p className="text-slate-400 mb-4 text-sm leading-relaxed">{article.snippet}</p>
         </a>
-        <div className="px-6 pb-4 flex flex-col gap-3">
+        <div className="px-6 pb-4 flex flex-col gap-3 mt-auto">
              <button onClick={() => onSummarize(article)} disabled={isSummarizing} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-cyan-500/10 text-cyan-300 rounded-lg hover:bg-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {isSummarizing ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {isSummarizing ? 'Summarizing...' : '✨ Summarize with AI'}
@@ -317,7 +302,7 @@ const ResourcesPage = () => {
             const formattedPath = <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: path.replace(/\n/g, '<br />') }} />;
             setModalContent({ title: "✨ Your Custom Learning Path", content: formattedPath });
         } catch (error) {
-            setModalContent({ title: "Error", content: <p>Could not generate learning path. Please try again later.</p> });
+            setModalContent({ title: "Error", content: <p>{error.message}</p> });
         } finally {
             setIsGenerating(false);
         }
@@ -364,38 +349,98 @@ const LoadingSpinner = () => (
     </div>
 );
 
-function App() {
+export default function App() {
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [isLoading, setIsLoading] = useState(true);
     const [trendingTopics, setTrendingTopics] = useState([]);
+    const [articles, setArticles] = useState([]);
+    const [isNewsLoading, setIsNewsLoading] = useState(true);
+    const [newsError, setNewsError] = useState(null);
 
-    const fetchTrendingTopics = useCallback(async () => {
+    const fetchNews = useCallback(async () => {
+        setIsNewsLoading(true);
+        setNewsError(null);
+        
+        // This securely reads the API key from the Vercel environment variables
+        const gnewsApiKey = process.env.REACT_APP_GNEWS_API_KEY;
+
+        if (!gnewsApiKey) {
+            setNewsError("News API key is not configured in Vercel Environment Variables.");
+            setIsNewsLoading(false);
+            return;
+        }
+
+        const query = '"artificial intelligence" OR "robotics"';
+        const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=12&token=${gnewsApiKey}`;
+
         try {
-            const titles = newsData.map(n => n.title).join(', ');
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`News API request failed with status ${response.status}`);
+            }
+            const data = await response.json();
+            
+            const formattedArticles = data.articles.map((article, index) => {
+                let tags = [];
+                const content = `${article.title} ${article.description}`.toLowerCase();
+                if (content.includes('robot') || content.includes('robotics')) tags.push('Robotics');
+                if (content.includes('ai') || content.includes('artificial intelligence') || content.includes('llm')) tags.push('AI');
+                if (content.includes('hardware') || content.includes('chip') || content.includes('sensor')) tags.push('Hardware');
+                if (content.includes('ethic') || content.includes('bias') || content.includes('fairness')) tags.push('Ethics');
+                if(tags.length === 0) tags.push('General');
+
+                return {
+                    id: article.url,
+                    title: article.title,
+                    snippet: article.description,
+                    source: article.source.name,
+                    date: new Date(article.publishedAt).toLocaleDateString(),
+                    url: article.url,
+                    tags: tags
+                }
+            });
+            setArticles(formattedArticles);
+        } catch (error) {
+            console.error("Failed to fetch news:", error);
+            setNewsError("Could not load news feed.");
+        } finally {
+            setIsNewsLoading(false);
+        }
+    }, []);
+
+    const fetchTrendingTopics = useCallback(async (currentArticles) => {
+        if (currentArticles.length === 0) return;
+        try {
+            const titles = currentArticles.slice(0, 10).map(n => n.title).join(', ');
             const prompt = `From the following list of tech news headlines, identify the 6 most important and distinct technical concepts or topics. Return them as a JSON array of strings. Headlines: ${titles}`;
             const topicsJson = await callGeminiAPI(prompt, true);
             const topics = JSON.parse(topicsJson);
             setTrendingTopics(topics);
         } catch (error) {
             console.error("Failed to fetch dynamic trending topics:", error);
-            // Fallback to static topics on error
             setTrendingTopics(["AGI", "Reinforcement Learning", "Humanoid Robots", "Generative AI", "Neural Networks", "SLAM"]);
         }
     }, []);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const loadInitialData = async () => {
+            await fetchNews();
             setIsLoading(false);
-            fetchTrendingTopics();
-        }, 1500); 
-        return () => clearTimeout(timer);
-    }, [fetchTrendingTopics]);
+        };
+        loadInitialData();
+    }, [fetchNews]);
+
+    useEffect(() => {
+        if (articles.length > 0) {
+            fetchTrendingTopics(articles);
+        }
+    }, [articles, fetchTrendingTopics]);
 
     const renderPage = () => {
         switch (currentPage) {
-            case 'news': return <NewsPage />;
+            case 'news': return <NewsPage articles={articles} isNewsLoading={isNewsLoading} newsError={newsError} />;
             case 'resources': return <ResourcesPage />;
-            case 'dashboard': default: return <Dashboard setCurrentPage={setCurrentPage} trendingTopics={trendingTopics} />;
+            case 'dashboard': default: return <Dashboard setCurrentPage={setCurrentPage} trendingTopics={trendingTopics} articles={articles} isNewsLoading={isNewsLoading} newsError={newsError} />;
         }
     };
 
@@ -425,5 +470,3 @@ function App() {
         </div>
     );
 }
-
-export default App;
