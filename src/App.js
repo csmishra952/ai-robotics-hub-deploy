@@ -15,7 +15,6 @@ const firebaseConfig = {
   appId: "1:942221143489:web:1aa71b675abd4911459340"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -307,7 +306,7 @@ const ResourceCard = ({ title, type, platform, author, url }) => (
     </div>
 );
 
-const ResourcesPage = ({ allResources }) => {
+const ResourcesPage = () => {
     const [goal, setGoal] = useState('');
     const [learningPath, setLearningPath] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -543,7 +542,20 @@ export default function App() {
             const data = await response.json();
             
             if (data.status === 'success' && data.results) {
-                const formattedArticles = data.results.map(article => {
+                // NEW: De-duplication logic
+                const uniqueArticles = [];
+                const seenTitles = new Set();
+                
+                data.results.forEach(article => {
+                    // Normalize title to catch similarities (e.g., ignore case and simple punctuation)
+                    const normalizedTitle = article.title.toLowerCase().replace(/[^a-z0-9\s]/gi, '').substring(0, 50);
+                    if (!seenTitles.has(normalizedTitle)) {
+                        seenTitles.add(normalizedTitle);
+                        uniqueArticles.push(article);
+                    }
+                });
+
+                const formattedArticles = uniqueArticles.map(article => {
                     let tags = [];
                     const content = `${article.title} ${article.description || ''}`.toLowerCase();
                     if (content.includes('robot') || content.includes('robotics')) tags.push('Robotics');
