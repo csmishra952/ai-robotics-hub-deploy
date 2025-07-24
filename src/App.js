@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu, Github, CheckSquare } from 'lucide-react';
+import { marked } from 'marked'; // <--- NEW: Import the markdown parser
 
 // --- Particle Background Component ---
 const ParticleBackground = () => {
@@ -294,43 +295,34 @@ const ResourcesPage = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState(null);
 
-    const allResources = Object.values(resourcesData).flat();
-
     const handleGeneratePath = async () => {
         if (!goal.trim()) return;
         setIsGenerating(true);
         setLearningPath(null);
         setError(null);
         try {
-            const resourcesListText = allResources.map(r => `ID: ${r.id}, Title: ${r.title}, Type: ${r.type}`).join('\n');
-            
-            // This schema is no longer used, as we are asking for a formatted string now.
-            // The new prompt is more detailed to control the output format.
-            
             const prompt = `
             You are an expert AI & Robotics tutor with a creative and encouraging tone.
             Your task is to create a mini-course module for a student with the goal: "${goal}".
 
             **Formatting Rules:**
-            1.  Start with a creative and motivational title for the module. Use a relevant emoji.
-            2.  Create 3-5 numbered steps. Each step should be a clear, actionable objective.
-            3.  For each step, write a short, engaging paragraph (1-2 sentences) explaining the "why" behind that step.
-            4.  For each step, you MUST select the single most relevant resource from the provided list and mention it by title.
-            5.  For each step, suggest one external resource link. This can be a specific type of YouTube search, a documentation page, or a relevant online tool. Phrase it as a suggestion, like "🚀 Pro Tip: Search YouTube for 'Beginner ROS tutorial' for a great visual guide."
-            6.  End with a concluding motivational sentence.
+            1.  Use Markdown for formatting.
+            2.  Start with a creative and motivational title for the module (H3 size). Use a relevant emoji.
+            3.  Create 3-5 numbered steps. Each step's title should be bold.
+            4.  For each step, write a short, engaging paragraph (1-2 sentences) explaining the "why".
+            5.  For each step, suggest one external resource link. This can be a specific type of YouTube search, a documentation page, or a relevant online tool. Phrase it as a suggestion in italics, like *🚀 Pro Tip: Search YouTube for 'Beginner ROS tutorial' for a great visual guide.*
+            6.  End with a concluding motivational sentence in bold.
 
             **Example Output Structure:**
             ### 🚀 Your Mission: Build a Robot that Sees!
             1.  **Master the Fundamentals:**
-                First, we need to build a solid foundation in machine learning. This is the brain behind your robot's vision! The best place to start is the "Machine Learning by Andrew Ng" course.
+                First, we need to build a solid foundation in machine learning. This is the brain behind your robot's vision!
                 *🚀 Pro Tip: Search YouTube for "What is a neural network?" to visualize the core concepts.*
             2.  **Learn the Language of Robots:**
-                Next, let's get comfortable with the Robot Operating System (ROS). It's the framework that will connect your code to the robot's hardware. Dive into the "ROS (Robot Operating System) Tutorials".
+                Next, let's get comfortable with the Robot Operating System (ROS). It's the framework that will connect your code to the robot's hardware.
                 *🚀 Pro Tip: Check out the official ROS wiki for installation guides specific to your operating system.*
-            ... and so on.
-
-            **Available Resources:**
-            ${resourcesListText}
+            
+            **Let's start building the future!**
             `;
             
             const pathText = await callGeminiAPI(prompt);
@@ -338,7 +330,7 @@ const ResourcesPage = () => {
 
         } catch (err) {
             console.error(err);
-            setError("Could not generate learning path. The AI may be busy. Please try again.");
+setError("Could not generate learning path. The AI may be busy. Please try again.");
         } finally {
             setIsGenerating(false);
         }
@@ -363,8 +355,11 @@ const ResourcesPage = () => {
             {error && <div className="text-center text-red-400">{error}</div>}
 
             {learningPath && (
-                <div className="bg-slate-800/50 p-6 rounded-2xl border border-cyan-500/30 animate-fadeInUp prose prose-invert prose-headings:text-cyan-400 prose-p:text-slate-300 prose-strong:text-white">
-                    <div dangerouslySetInnerHTML={{ __html: learningPath.replace(/\n/g, '<br />') }} />
+                // NEW: Added prose classes for better markdown rendering
+                <div className="bg-slate-800/50 p-6 rounded-2xl border border-cyan-500/30 animate-fadeInUp 
+                                prose prose-invert prose-headings:text-cyan-400 prose-p:text-slate-300 
+                                prose-strong:text-white prose-li:marker:text-cyan-400">
+                    <div dangerouslySetInnerHTML={{ __html: marked(learningPath) }} />
                 </div>
             )}
 
@@ -510,18 +505,14 @@ export default function App() {
             
             <style>{`
                 body { background-color: #0f172a; }
-                .prose {
-                    line-height: 1.7;
-                }
-                .prose h3 {
-                    margin-bottom: 1.5em;
-                }
-                .prose strong {
-                    color: #e2e8f0; /* slate-200 */
-                }
-                .prose p {
-                    margin-bottom: 1em;
-                }
+                /* Added prose styles for better markdown rendering */
+                .prose { line-height: 1.7; }
+                .prose h3 { margin-bottom: 1.5em; }
+                .prose strong { color: #e2e8f0; } /* slate-200 */
+                .prose p, .prose ol, .prose ul { margin-bottom: 1em; }
+                .prose li { margin-top: 0.5em; }
+                .prose a { color: #67e8f9; } /* cyan-300 */
+
                 .animate-fadeIn { animation: fadeIn 0.5s ease-in-out forwards; }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 .animate-fadeInUp { animation: fadeInUp 0.5s ease-in-out forwards; opacity: 0; }
