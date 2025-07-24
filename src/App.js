@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu } from 'lucide-react';
+import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu, Github, CheckSquare } from 'lucide-react';
 
 // --- Particle Background Component ---
 const ParticleBackground = () => {
@@ -41,7 +41,7 @@ const ParticleBackground = () => {
 
         let animationFrameId;
         const initParticles = () => {
-            const particleCount = Math.floor((canvas.width * canvas.height) / 15000); // Reduced density for performance
+            const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
             particles = [];
             for (let i = 0; i < particleCount; i++) {
                 particles.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
@@ -81,21 +81,33 @@ const resourcesData = {
         { id: 1, title: "Machine Learning by Andrew Ng", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/learn/machine-learning" },
         { id: 2, title: "Deep Learning Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/deep-learning" },
         { id: 3, title: "Pattern Recognition and Machine Learning", type: "Book", author: "C. Bishop", url: "https://www.google.com/search?q=Pattern+Recognition+and+Machine+Learning+by+Christopher+Bishop" },
+        { id: 13, title: "fast.ai: Practical Deep Learning for Coders", type: "Online Course", platform: "fast.ai", url: "https://course.fast.ai/"},
+        { id: 14, title: "Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow", type: "Book", author: "Aurélien Géron", url: "https://www.google.com/search?q=Hands-On+Machine+Learning+with+Scikit-Learn%2C+Keras+%26+TensorFlow"}
     ],
     "Robotics": [
         { id: 6, title: "Robotics: Modelling, Planning and Control", type: "Book", author: "B. Siciliano", url: "https://www.google.com/search?q=Robotics+Modelling+Planning+and+Control+by+Bruno+Siciliano" },
         { id: 7, title: "ROS (Robot Operating System) Tutorials", type: "Documentation", platform: "ROS.org", url: "http://wiki.ros.org/ROS/Tutorials" },
         { id: 8, title: "Modern Robotics Specialization", type: "Online Course", platform: "Coursera", url: "https://www.coursera.org/specializations/modernrobotics" },
+        { id: 15, title: "Introduction to Robotics", type: "Online Course", platform: "edX (UPenn)", url: "https://www.edx.org/professional-certificate/pennx-robotics"},
+        { id: 16, title: "Probabilistic Robotics", type: "Book", author: "Thrun, Burgard, Fox", url: "https://www.google.com/search?q=Probabilistic+Robotics+Thrun+Burgard+Fox"}
     ],
     "Advanced Topics": [
         { id: 10, title: "Reinforcement Learning: An Introduction", type: "Book", author: "Sutton & Barto", url: "http://incompleteideas.net/book/the-book-2nd.html" },
         { id: 11, title: "Computer Vision: Algorithms and Applications", type: "Book", author: "R. Szeliski", url: "http://szeliski.org/Book/" },
         { id: 12, "title": "Natural Language Processing with Transformers", "type": "Book", "author": "L. Tunstall", "url": "https://www.google.com/search?q=Natural+Language+Processing+with+Transformers+by+Lewis+Tunstall" },
+        { id: 17, title: "CS231n: Convolutional Neural Networks for Visual Recognition", type: "Online Course", platform: "Stanford", url: "http://cs231n.stanford.edu/"}
+    ],
+    "Code Repositories & Projects": [
+        { id: 18, title: "TensorFlow Models", type: "GitHub Repo", platform: "TensorFlow", url: "https://github.com/tensorflow/models"},
+        { id: 19, title: "PyTorch Examples", type: "GitHub Repo", platform: "PyTorch", url: "https://github.com/pytorch/examples"},
+        { id: 20, title: "Hugging Face Transformers", type: "GitHub Repo", platform: "Hugging Face", url: "https://github.com/huggingface/transformers"},
+        { id: 21, title: "ROS Navigation Stack", type: "GitHub Repo", platform: "ROS", url: "https://github.com/ros-planning/navigation"},
+        { id: 22, title: "OpenCV Official", type: "GitHub Repo", platform: "OpenCV", url: "https://github.com/opencv/opencv"}
     ]
 };
 
 // --- Gemini API Helper ---
-const callGeminiAPI = async (prompt, isJson = false) => {
+const callGeminiAPI = async (prompt, schema) => {
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
     if (!apiKey) throw new Error("Gemini API key is not configured.");
 
@@ -103,10 +115,10 @@ const callGeminiAPI = async (prompt, isJson = false) => {
     
     const payload = {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        ...(isJson && {
+        ...(schema && {
             generationConfig: {
                 responseMimeType: "application/json",
-                responseSchema: { type: "ARRAY", items: { type: "STRING" } }
+                responseSchema: schema
             }
         })
     };
@@ -149,27 +161,18 @@ const NavItem = ({ icon: Icon, label, onClick, isActive }) => (
 
 const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => (
     <>
-        {/* Overlay for mobile */}
         <div className={`fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsOpen(false)}></div>
-        
         <aside className={`w-64 bg-slate-900/80 backdrop-blur-lg border-r border-slate-700/50 flex-col fixed h-full z-30 transition-transform duration-300 ease-in-out md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="flex items-center justify-between h-20 border-b border-slate-700/50 px-4">
-                <div className="flex items-center">
-                    <Cpu className="w-8 h-8 text-cyan-400 animate-pulse" />
-                    <h1 className="ml-3 text-xl font-bold text-white tracking-wider">AI Hub</h1>
-                </div>
-                <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsOpen(false)}>
-                    <X size={24} />
-                </button>
+                <div className="flex items-center"><Cpu className="w-8 h-8 text-cyan-400 animate-pulse" /><h1 className="ml-3 text-xl font-bold text-white tracking-wider">AI Hub</h1></div>
+                <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsOpen(false)}><X size={24} /></button>
             </div>
             <nav className="flex-grow mt-6 space-y-2">
                 <NavItem icon={Home} label="Dashboard" onClick={() => { setCurrentPage('dashboard'); setIsOpen(false); }} isActive={currentPage === 'dashboard'} />
                 <NavItem icon={Newspaper} label="Latest News" onClick={() => { setCurrentPage('news'); setIsOpen(false); }} isActive={currentPage === 'news'} />
                 <NavItem icon={BookOpen} label="Learning Resources" onClick={() => { setCurrentPage('resources'); setIsOpen(false); }} isActive={currentPage === 'resources'} />
             </nav>
-            <div className="p-4 border-t border-slate-700/50 text-slate-500 text-xs">
-                <p>&copy; 2025 AI & Robotics Hub. All rights reserved.</p>
-            </div>
+            <div className="p-4 border-t border-slate-700/50 text-slate-500 text-xs"><p>&copy; 2025 AI & Robotics Hub. All rights reserved.</p></div>
         </aside>
     </>
 );
@@ -185,7 +188,6 @@ const Dashboard = ({ setCurrentPage, trendingTopics, articles, isNewsLoading, ne
                 <button onClick={() => setCurrentPage('resources')} className="flex items-center justify-center px-6 py-3 font-semibold text-white bg-slate-700 rounded-lg hover:bg-slate-600 transition-all duration-300 transform hover:scale-105">Start Learning <ArrowRight className="w-5 h-5 ml-2" /></button>
             </div>
         </div>
-
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
                 <div className="flex items-center mb-4"><Rss className="w-6 h-6 text-cyan-400" /><h2 className="ml-3 text-2xl font-bold text-white">Live News Feed</h2></div>
@@ -213,12 +215,8 @@ const NewsPage = ({ articles, isNewsLoading, newsError }) => {
     const [activeFilter, setActiveFilter] = useState('All');
     const [modalContent, setModalContent] = useState(null);
     const [isSummarizing, setIsSummarizing] = useState(null);
-
     const filters = ['All', 'AI', 'Robotics', 'Hardware', 'Ethics'];
-    
-    const filteredNews = activeFilter === 'All' ? articles : articles.filter(item => 
-        item.tags.some(tag => tag.toLowerCase().includes(activeFilter.toLowerCase()))
-    );
+    const filteredNews = activeFilter === 'All' ? articles : articles.filter(item => item.tags.some(tag => tag.toLowerCase().includes(activeFilter.toLowerCase())));
 
     const handleSummarize = async (article) => {
         setIsSummarizing(article.id);
@@ -262,9 +260,7 @@ const NewsPage = ({ articles, isNewsLoading, newsError }) => {
 const NewsCard = ({ article, onSummarize, isSummarizing }) => (
     <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 transition-all duration-300 hover:border-cyan-400/50 hover:scale-[1.02] hover:bg-slate-800/80 group h-full flex flex-col">
         <a href={article.url} target="_blank" rel="noopener noreferrer" className="p-6 flex-grow">
-            <div className="flex gap-2 mb-3 flex-wrap">
-                {article.tags.map(tag => <span key={tag} className="text-xs font-semibold text-cyan-300 bg-cyan-900/50 px-2 py-0.5 rounded-full">{tag}</span>)}
-            </div>
+            <div className="flex gap-2 mb-3 flex-wrap">{article.tags.map(tag => <span key={tag} className="text-xs font-semibold text-cyan-300 bg-cyan-900/50 px-2 py-0.5 rounded-full">{tag}</span>)}</div>
             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors duration-300">{article.title}</h3>
             <p className="text-slate-400 mb-4 text-sm leading-relaxed">{article.snippet}</p>
         </a>
@@ -294,58 +290,117 @@ const ResourceCard = ({ title, type, platform, author, url }) => (
 
 const ResourcesPage = () => {
     const [goal, setGoal] = useState('');
-    const [modalContent, setModalContent] = useState(null);
+    const [learningPath, setLearningPath] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [error, setError] = useState(null);
+
+    const allResources = Object.values(resourcesData).flat();
 
     const handleGeneratePath = async () => {
         if (!goal.trim()) return;
         setIsGenerating(true);
+        setLearningPath(null);
+        setError(null);
         try {
-            const resourcesList = Object.entries(resourcesData).map(([category, items]) => 
-                `${category}:\n${items.map(item => `- ${item.title} (${item.type})`).join('\n')}`
-            ).join('\n\n');
+            const resourcesListText = allResources.map(r => `ID: ${r.id}, Title: ${r.title}, Type: ${r.type}`).join('\n');
             
-            const prompt = `As an expert tutor in AI and Robotics, create a simple, step-by-step learning path for a student with the goal: "${goal}". Use the following list of available resources. Recommend a sequence of 2-4 resources from the list and briefly explain why each one is a good next step. If a resource is not on the list, suggest what kind of topic they should search for. Keep the language encouraging and clear.\n\nAvailable Resources:\n${resourcesList}`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    moduleTitle: { type: "STRING" },
+                    steps: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                title: { type: "STRING" },
+                                description: { type: "STRING" },
+                                resourceId: { type: "NUMBER" },
+                            },
+                        },
+                    },
+                },
+            };
             
-            const path = await callGeminiAPI(prompt);
-            const formattedPath = <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: path.replace(/\n/g, '<br />') }} />;
-            setModalContent({ title: "✨ Your Custom Learning Path", content: formattedPath });
-        } catch (error) {
-            setModalContent({ title: "Error", content: <p>{error.message}</p> });
+            const prompt = `As an expert AI & Robotics tutor, create a short, structured learning module for a student with the goal: "${goal}".
+            Generate a concise module title.
+            Create 3 to 5 sequential learning steps. For each step, provide a clear title and a brief description of the objective.
+            Crucially, for each step, you MUST choose the most relevant resource from the list below and include its corresponding 'resourceId'. Do not invent new IDs.
+            
+            Available Resources:\n${resourcesListText}`;
+            
+            const pathJson = await callGeminiAPI(prompt, schema);
+            const path = JSON.parse(pathJson);
+            setLearningPath(path);
+        } catch (err) {
+            console.error(err);
+            setError("Could not generate learning path. The AI may be busy. Please try again.");
         } finally {
             setIsGenerating(false);
         }
     };
 
     return (
-        <>
-            {modalContent && <Modal title={modalContent.title} content={modalContent.content} onClose={() => setModalContent(null)} />}
-            <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
-                <div className="flex items-center mb-8"><BookOpen className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-3xl md:text-4xl font-bold text-white">Learning Resources</h1></div>
-                
-                <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 mb-12">
-                    <h2 className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center"><Sparkles size={20} className="text-cyan-400 mr-3" /> ✨ AI Learning Path Generator</h2>
-                    <p className="text-slate-400 mb-4">Describe your learning goal, and our AI will create a personalized study plan for you.</p>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., 'Get started with computer vision'" className="flex-grow bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"/>
-                        <button onClick={handleGeneratePath} disabled={isGenerating} className="flex items-center justify-center px-6 py-2 font-semibold text-white bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                            {isGenerating ? <LoaderCircle size={20} className="animate-spin" /> : 'Generate Path'}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="space-y-12">
-                    {Object.entries(resourcesData).map(([category, items]) => (
-                        <section key={category}>
-                            <div className="flex items-center mb-6"><BrainCircuit className="w-6 h-6 text-cyan-400/80" /><h2 className="ml-3 text-2xl font-semibold text-white">{category}</h2></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {items.map(item => <ResourceCard key={item.id} {...item} />)}
-                            </div>
-                        </section>
-                    ))}
+        <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
+            <div className="flex items-center mb-8"><BookOpen className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-3xl md:text-4xl font-bold text-white">Learning Resources</h1></div>
+            
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 mb-12">
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center"><Sparkles size={20} className="text-cyan-400 mr-3" /> Interactive Learning Path Generator</h2>
+                <p className="text-slate-400 mb-4">Describe your learning goal, and our AI will generate a structured course module for you from our resources.</p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., 'Build a robot that can see'" className="flex-grow bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"/>
+                    <button onClick={handleGeneratePath} disabled={isGenerating} className="flex items-center justify-center px-6 py-2 font-semibold text-white bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        {isGenerating ? <LoaderCircle size={20} className="animate-spin" /> : 'Generate Module'}
+                    </button>
                 </div>
             </div>
-        </>
+
+            {isGenerating && <div className="text-center text-slate-300">Generating your custom module...</div>}
+            {error && <div className="text-center text-red-400">{error}</div>}
+
+            {learningPath && (
+                <div className="bg-slate-800/50 p-6 rounded-2xl border border-cyan-500/30 animate-fadeInUp">
+                    <h3 className="text-2xl font-bold text-cyan-400 mb-4">{learningPath.moduleTitle}</h3>
+                    <ol className="space-y-4">
+                        {learningPath.steps.map((step, index) => {
+                            const resource = allResources.find(r => r.id === step.resourceId);
+                            return (
+                                <li key={index} className="flex items-start gap-4">
+                                    <div className="flex flex-col items-center">
+                                        <div className="bg-cyan-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">{index + 1}</div>
+                                        {index < learningPath.steps.length - 1 && <div className="w-px h-12 bg-slate-600"></div>}
+                                    </div>
+                                    <div className="flex-1 pb-8 border-b border-slate-700/50">
+                                        <h4 className="font-bold text-white text-lg">{step.title}</h4>
+                                        <p className="text-slate-400 mt-1 mb-3">{step.description}</p>
+                                        {resource && (
+                                            <a href={resource.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 bg-cyan-500/10 px-3 py-1 rounded-full hover:bg-cyan-500/20 transition-colors">
+                                                <CheckSquare size={16} />
+                                                Go to Resource: {resource.title}
+                                            </a>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                </div>
+            )}
+
+            <div className="space-y-12 mt-12">
+                {Object.entries(resourcesData).map(([category, items]) => (
+                    <section key={category}>
+                        <div className="flex items-center mb-6">
+                            {category === "Code Repositories & Projects" ? <Github className="w-6 h-6 text-cyan-400/80"/> : <BrainCircuit className="w-6 h-6 text-cyan-400/80" />}
+                            <h2 className="ml-3 text-2xl font-semibold text-white">{category}</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {items.map(item => <ResourceCard key={item.id} {...item} />)}
+                        </div>
+                    </section>
+                ))}
+            </div>
+        </div>
     );
 };
 
@@ -384,9 +439,8 @@ export default function App() {
 
         try {
             const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`NewsData.io API request failed with status ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`NewsData.io API request failed with status ${response.status}`);
+            
             const data = await response.json();
             
             if (data.status === 'success' && data.results) {
@@ -425,8 +479,9 @@ export default function App() {
         if (currentArticles.length === 0) return;
         try {
             const titles = currentArticles.slice(0, 10).map(n => n.title).join(', ');
-            const prompt = `From the following list of tech news headlines, identify the 6 most important and distinct technical concepts or topics. Return them as a JSON array of strings. Headlines: ${titles}`;
-            const topicsJson = await callGeminiAPI(prompt, true);
+            const prompt = `From the following list of tech news headlines, identify the 6 most important and distinct technical concepts or topics. Return them as a JSON array of strings.`;
+            const schema = { type: "ARRAY", items: { type: "STRING" } };
+            const topicsJson = await callGeminiAPI(prompt, schema);
             const topics = JSON.parse(topicsJson);
             setTrendingTopics(topics);
         } catch (error) {
@@ -467,10 +522,7 @@ export default function App() {
             <div className="relative z-10 flex">
                 <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
                 <main className="flex-1 md:ml-64">
-                    {/* Hamburger Menu Button */}
-                    <button className="md:hidden fixed top-4 left-4 z-40 text-white bg-slate-800/50 p-2 rounded-md" onClick={() => setIsSidebarOpen(true)}>
-                        <Menu size={24} />
-                    </button>
+                    <button className="md:hidden fixed top-4 left-4 z-40 text-white bg-slate-800/50 p-2 rounded-md" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
                     {renderPage()}
                 </main>
             </div>
