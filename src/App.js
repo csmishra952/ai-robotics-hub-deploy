@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu, Github, CheckSquare } from 'lucide-react';
-import { marked } from 'marked'; // <--- NEW: Import the markdown parser
+import { Cpu, Newspaper, BrainCircuit, BookOpen, Home, ArrowRight, Rss, Zap, Sparkles, X, LoaderCircle, AlertTriangle, Menu, Github, CheckSquare, MessageSquare } from 'lucide-react';
+import { marked } from 'marked';
+
+// --- Firebase Integration ---
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, query, orderBy } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCJktW3Jwpqu9uHAjukOZsHz2guNTrC_Tg",
+  authDomain: "ai-robotics-hub-community.firebaseapp.com",
+  projectId: "ai-robotics-hub-community",
+  storageBucket: "ai-robotics-hub-community.firebasestorage.app",
+  messagingSenderId: "942221143489",
+  appId: "1:942221143489:web:1aa71b675abd4911459340"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // --- Particle Background Component ---
 const ParticleBackground = () => {
@@ -172,6 +189,7 @@ const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => (
                 <NavItem icon={Home} label="Dashboard" onClick={() => { setCurrentPage('dashboard'); setIsOpen(false); }} isActive={currentPage === 'dashboard'} />
                 <NavItem icon={Newspaper} label="Latest News" onClick={() => { setCurrentPage('news'); setIsOpen(false); }} isActive={currentPage === 'news'} />
                 <NavItem icon={BookOpen} label="Learning Resources" onClick={() => { setCurrentPage('resources'); setIsOpen(false); }} isActive={currentPage === 'resources'} />
+                <NavItem icon={MessageSquare} label="Community Q&A" onClick={() => { setCurrentPage('community'); setIsOpen(false); }} isActive={currentPage === 'community'} />
             </nav>
             <div className="p-4 border-t border-slate-700/50 text-slate-500 text-xs"><p>&copy; 2025 AI & Robotics Hub. All rights reserved.</p></div>
         </aside>
@@ -289,7 +307,7 @@ const ResourceCard = ({ title, type, platform, author, url }) => (
     </div>
 );
 
-const ResourcesPage = () => {
+const ResourcesPage = ({ allResources }) => {
     const [goal, setGoal] = useState('');
     const [learningPath, setLearningPath] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -312,17 +330,6 @@ const ResourcesPage = () => {
             4.  For each step, write a short, engaging paragraph (1-2 sentences) explaining the "why".
             5.  For each step, suggest one external resource link. This can be a specific type of YouTube search, a documentation page, or a relevant online tool. Phrase it as a suggestion in italics, like *🚀 Pro Tip: Search YouTube for 'Beginner ROS tutorial' for a great visual guide.*
             6.  End with a concluding motivational sentence in bold.
-
-            **Example Output Structure:**
-            ### 🚀 Your Mission: Build a Robot that Sees!
-            1.  **Master the Fundamentals:**
-                First, we need to build a solid foundation in machine learning. This is the brain behind your robot's vision!
-                *🚀 Pro Tip: Search YouTube for "What is a neural network?" to visualize the core concepts.*
-            2.  **Learn the Language of Robots:**
-                Next, let's get comfortable with the Robot Operating System (ROS). It's the framework that will connect your code to the robot's hardware.
-                *🚀 Pro Tip: Check out the official ROS wiki for installation guides specific to your operating system.*
-            
-            **Let's start building the future!**
             `;
             
             const pathText = await callGeminiAPI(prompt);
@@ -330,7 +337,7 @@ const ResourcesPage = () => {
 
         } catch (err) {
             console.error(err);
-setError("Could not generate learning path. The AI may be busy. Please try again.");
+            setError("Could not generate learning path. The AI may be busy. Please try again.");
         } finally {
             setIsGenerating(false);
         }
@@ -355,10 +362,7 @@ setError("Could not generate learning path. The AI may be busy. Please try again
             {error && <div className="text-center text-red-400">{error}</div>}
 
             {learningPath && (
-                // NEW: Added prose classes for better markdown rendering
-                <div className="bg-slate-800/50 p-6 rounded-2xl border border-cyan-500/30 animate-fadeInUp 
-                                prose prose-invert prose-headings:text-cyan-400 prose-p:text-slate-300 
-                                prose-strong:text-white prose-li:marker:text-cyan-400">
+                <div className="bg-slate-800/50 p-6 rounded-2xl border border-cyan-500/30 animate-fadeInUp prose prose-invert prose-headings:text-cyan-400 prose-p:text-slate-300 prose-strong:text-white prose-li:marker:text-cyan-400">
                     <div dangerouslySetInnerHTML={{ __html: marked(learningPath) }} />
                 </div>
             )}
@@ -375,6 +379,124 @@ setError("Could not generate learning path. The AI may be busy. Please try again
                         </div>
                     </section>
                 ))}
+            </div>
+        </div>
+    );
+};
+
+const CommunityPage = () => {
+    const [questions, setQuestions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [newQuestion, setNewQuestion] = useState('');
+    const [activeQuestion, setActiveQuestion] = useState(null);
+    const [newAnswer, setNewAnswer] = useState('');
+    const [isPosting, setIsPosting] = useState(false);
+
+    useEffect(() => {
+        const q = query(collection(db, "questions"), orderBy("timestamp", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const questionsData = [];
+            querySnapshot.forEach((doc) => {
+                questionsData.push({ id: doc.id, ...doc.data() });
+            });
+            setQuestions(questionsData);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching questions: ", error);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handlePostQuestion = async () => {
+        if (newQuestion.trim() === '' || isPosting) return;
+        setIsPosting(true);
+        try {
+            await addDoc(collection(db, "questions"), {
+                text: newQuestion,
+                answers: [],
+                timestamp: serverTimestamp()
+            });
+            setNewQuestion('');
+        } catch (error) {
+            console.error("Error posting question: ", error);
+        } finally {
+            setIsPosting(false);
+        }
+    };
+
+    const handlePostAnswer = async () => {
+        if (newAnswer.trim() === '' || !activeQuestion || isPosting) return;
+        setIsPosting(true);
+        const questionRef = doc(db, "questions", activeQuestion.id);
+        const answer = { text: newAnswer, timestamp: new Date() };
+        try {
+            await updateDoc(questionRef, {
+                answers: arrayUnion(answer)
+            });
+            setNewAnswer('');
+            setActiveQuestion(prev => ({...prev, answers: [...prev.answers, answer]}));
+        } catch(error) {
+            console.error("Error posting answer: ", error);
+        } finally {
+            setIsPosting(false);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="p-8 text-center text-white">Loading community board...</div>;
+    }
+
+    return (
+        <div className="p-6 md:p-8 lg:p-12 animate-fadeIn">
+            <div className="flex items-center mb-8"><MessageSquare className="w-8 h-8 text-cyan-400" /><h1 className="ml-4 text-3xl md:text-4xl font-bold text-white">Community Q&A</h1></div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 mb-8">
+                <h2 className="text-xl font-bold text-white mb-3">Ask a Question</h2>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <input type="text" value={newQuestion} onChange={(e) => setNewQuestion(e.target.value)} placeholder="What's your question about AI or Robotics?" className="flex-grow bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"/>
+                    <button onClick={handlePostQuestion} disabled={isPosting} className="flex items-center justify-center px-6 py-2 font-semibold text-white bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all disabled:opacity-50">
+                        {isPosting ? <LoaderCircle size={20} className="animate-spin" /> : 'Post Question'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+                    <h3 className="text-lg font-semibold text-white p-2">All Questions</h3>
+                    <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+                        {questions.map(q => (
+                            <li key={q.id} onClick={() => setActiveQuestion(q)} className={`p-3 rounded-lg cursor-pointer transition-colors ${activeQuestion?.id === q.id ? 'bg-cyan-500/20' : 'hover:bg-slate-700/50'}`}>
+                                <p className="text-slate-300 truncate">{q.text}</p>
+                                <span className="text-xs text-slate-500">{q.answers.length} answers</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="lg:col-span-2 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 min-h-[50vh]">
+                    {activeQuestion ? (
+                        <div>
+                            <h2 className="text-2xl font-bold text-cyan-400 mb-4">{activeQuestion.text}</h2>
+                            <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
+                                {activeQuestion.answers.length > 0 ? [...activeQuestion.answers].sort((a,b) => a.timestamp.toMillis() - b.timestamp.toMillis()).map((ans, index) => (
+                                    <div key={index} className="p-4 bg-slate-700/50 rounded-lg">
+                                        <p className="text-slate-200">{ans.text}</p>
+                                    </div>
+                                )) : <p className="text-slate-400">No answers yet. Be the first to reply!</p>}
+                            </div>
+                            <div className="flex flex-col gap-4 border-t border-slate-700 pt-6">
+                                <textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} placeholder="Write your answer..." rows="3" className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"></textarea>
+                                <button onClick={handlePostAnswer} disabled={isPosting} className="self-end px-6 py-2 font-semibold text-white bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/20 hover:bg-cyan-400 transition-all disabled:opacity-50">
+                                    {isPosting ? <LoaderCircle size={20} className="animate-spin" /> : 'Post Answer'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex justify-center items-center h-full">
+                            <p className="text-slate-400">Select a question to see the discussion.</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -397,6 +519,7 @@ export default function App() {
     const [isNewsLoading, setIsNewsLoading] = useState(true);
     const [newsError, setNewsError] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const allResources = Object.values(resourcesData).flat();
 
     const fetchNews = useCallback(async () => {
         setIsNewsLoading(true);
@@ -483,7 +606,8 @@ export default function App() {
     const renderPage = () => {
         switch (currentPage) {
             case 'news': return <NewsPage articles={articles} isNewsLoading={isNewsLoading} newsError={newsError} />;
-            case 'resources': return <ResourcesPage />;
+            case 'resources': return <ResourcesPage allResources={allResources} />;
+            case 'community': return <CommunityPage />;
             case 'dashboard': default: return <Dashboard setCurrentPage={setCurrentPage} trendingTopics={trendingTopics} articles={articles} isNewsLoading={isNewsLoading} newsError={newsError} />;
         }
     };
@@ -505,13 +629,12 @@ export default function App() {
             
             <style>{`
                 body { background-color: #0f172a; }
-                /* Added prose styles for better markdown rendering */
                 .prose { line-height: 1.7; }
                 .prose h3 { margin-bottom: 1.5em; }
-                .prose strong { color: #e2e8f0; } /* slate-200 */
+                .prose strong { color: #e2e8f0; }
                 .prose p, .prose ol, .prose ul { margin-bottom: 1em; }
                 .prose li { margin-top: 0.5em; }
-                .prose a { color: #67e8f9; } /* cyan-300 */
+                .prose a { color: #67e8f9; }
 
                 .animate-fadeIn { animation: fadeIn 0.5s ease-in-out forwards; }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
